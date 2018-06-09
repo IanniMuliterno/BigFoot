@@ -1,4 +1,6 @@
 # Source: http://www.public.iastate.edu/~pcaragea/S40608/Compute/Detrending_anisotropy.R
+# http://www.public.iastate.edu/~pcaragea/S40608/Compute/
+
 
 #this code will guide you through median polish kriging,
 #detrending using regression-like methods followed by ordinary kriging,
