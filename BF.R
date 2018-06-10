@@ -2,6 +2,7 @@
 #require(map)
 #require(purrr)
 #require(xtable)
+library(akima)
 require(geoR)  
 require(moments)
 require(sp)
@@ -15,7 +16,7 @@ library(tibble)
 library(mvtnorm)
 library(spTest)
 
-bf <- read_excel("C:/Users/dapproplan2/Downloads/bigfoot USA.xlsx")
+bf <- read_excel("C:/Users/tuchi/Desktop/BigFoot-master/BigFoot-master/bigfoot USA.xlsx")
 
 #Removendo Alaska
 #Alaska tecnicamente faz parte dos EUA, mas fica muito distante do resto do pais
@@ -72,6 +73,12 @@ centros<-SpatialPointsDataFrame(centros,tibble(attr1 = bf$State))
 #visualizacao
 
 plot(centros)
+
+# visualizar dados interpolados
+
+bf.interp=interp(bf$lati,bf$long,log(bf$Sightings))
+image(bf.interp,col=terrain.colors(100))
+title(main="Interpolated data")
 #leaflet() %>% addTiles() %>% addMarkers(data = centros, 
 #                                        popup = ~attr1)
 
@@ -109,8 +116,7 @@ coordinates(bf2) <- cbind(bf2$lati,bf2$long)
 bf2$Sightings <- as.numeric(bf2$Sightings)
 
 d <- as.geodata(bf2)
-
-#normalidade da vari�vel resposta
+#normalidade da vari?vel resposta
 mean(d[["data"]])
 sd(d[["data"]])
 ks.test(d[["data"]], "pnorm", 5, 8)
@@ -121,7 +127,7 @@ qqnorm(log(d[["data"]]))
 abline(4,1,col="red")
 
 d[["data"]] <- log(d[["data"]])
-#voltar a variavel resposta sem transforma��es
+#voltar a variavel resposta sem transforma??es
 #d[["data"]] <- P2$data
 # estudo de tendencia direcional
 points(d,l=1,pt.div="equal",col=gray(seq(1,0,l=11)),main="Post-Plot") 
@@ -135,10 +141,32 @@ plot(d)
 #bubble(d2, "Avistamento", dolog=TRUE, key.space="bottom")  # não ajuda em nada nesse caso
 max(dist(d[[1]]))/2
 x11()
-Variog <- variog4(d, uvec=seq(0,max(dist(d[[1]]))/2,l=9))
-plot(variog4(d, uvec=seq(0,max(dist(d[[1]]))/2,l=9)), legend = T)
+Variog <- variog4(d, uvec=seq(0,18,l=11)  )
+plot(Variog, legend = T)
+
+#visualizando separadamente as 4 direcoes (util tambem definir 1 modelo e 
+#adiciona-lo neste plot para cada direcao a fim checar anisotropia visualmente)
+
+x11()
+par(mfrow = c(2, 2))
+plot(variog(d,uvec=seq(0,18,l=9), 
+            dir=0, 
+            tol=pi/8 ),main="N-S")
+plot(variog(d,uvec=seq(0,18,l=9), 
+            dir=pi/2, 
+            tol=pi/8 ),main="E-W")
+plot(variog(d,uvec=seq(0,18,l=9), 
+        dir=3*pi/4, 
+        tol=pi/8 ),main="SE-NW")
+plot(variog(d,uvec=seq(0,18,l=9), 
+            dir=pi/4, 
+            tol=pi/8 ),main="SW-NE")
+
+par(mfrow = c(1, 1))
+
 alcances <- c(Variog$`0`$max.dist,Variog$`45`$max.dist,Variog$`90`$max.dist,Variog$`135`$max.dist)
 
+#### Rodando o teste de anisotropia
 
 mydt <- cbind(d[[1]],d[["data"]])
 
@@ -157,25 +185,133 @@ myh.sb <-  0.85
 tr.guan <- GuanTestUnif(spdata = mydt, lagmat = mylags, A = myA, df = 2, h = myh,
                         kernel = "norm", truncation = 1.5, xlims = my.xlims, ylims = my.ylims, 
                       grid.spacing = my.grid.spacing, window.dims = c(8,5), subblock.h = myh.sb)
-tr.guan$p.value
+tr.guan$p.value # segundo a GuanTestUnif com a configuração menos problematica possivel, o H0 e rejeitado por muito pouco
+
+#arranjar os dados em formato matricial para aplicar median polish
+bf.mat<-tapply(d[["data"]],list(factor(bf2$lati),factor(bf2$long)),function(x)x)
+
+# necessário remover NA
+bf.med<-medpolish(bf.mat,na.rm=T)
+bf.trend.m<-bf2$Sightings-bf.med$resid
+
+bf.trend<-na.omit(as.vector(bf.trend.m))
+
+bf.res<-na.omit(as.vector(bf.med$res))
+bf.res.g<-as.geodata(cbind(d[[1]],bf.res))
+plot(bf.res)
+#summary(bf.res)
+
+#bf.finalvar<-variog(bf.res.g,max.dist=18,estimator.type="modulus")
+#plot(bf.finalvar,xlab="Distance",ylab="Gamma",pch=20)
+
+#bf.variog.d<-variog4(bf.res.g,max.dist=18,estimator.type="modulus")
+#plot(bf.variog.d,lty=7,lwd=2)
+
+#Remover tendência usando regressão
+reg1<-lm(d[["data"]]~bf2$lati+bf2$long)#regressão nas coordenadas
+summary(reg1) # talvez a longitude nao devesse estar inclusa
+
+#reg2<-lm(d[["data"]]~bf2$lati)
+#summary(reg2) # ou talvez devesse
 
 
+bf.res<-reg1$res #extrair res e plotar
+summary(bf.res)
+bf.reg.g<-as.geodata(cbind(bf2@coords,bf.res)) 
+plot(bf.reg.g)
+#plot(d) #esse plot permite comparar os dados originais (onde apenas o log é aplicado a var. resposta)
+#com os dados pós tentativa de correção de tendência. Aparentemente corrigir tendencia nao foi interessante (o semivariograma que o diga)
+
+# o tipo de estimador foi alterado (classico -> Cressie), mas não causa mudança relevante
+bf.res.reg.variog2<-variog4(bf.reg.g,max.dist=18,estimator.type="modulus",trend = "2nd")
+x11()
+plot(bf.res.reg.variog2)
+title(main="Linear trend Residuals Directional Variograms")
+
+# omnidirecional
 
 d.var <- variog(d, uvec=seq(0,25,l=11),estimator.type="classical",pairs.min=30)
 # visualizacao da semivariograma experimental ondimensional de Matheron 
 plot(d.var, main= '')
-d.var
+d.var$u
+d.var$v
 
+#############################################################################
+###### AJUSTE DO MODELO EXPONENCIAL POR ML   
+#############################################################################
+
+plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma') 
+exp.ml<-likfit(d,ini=c(1.5,15),lambda=1, lik.method= "ML", cov.model="exp") 
+#exp.ml 
+lines(exp.ml,col="blue")
+summary(exp.ml)
+
+
+#############################################################################
+###### AJUSTE DO MODELO EXPONENCIAL POR ML   
+#############################################################################
+
+plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma') 
+wave.ml<-likfit(d,ini=c(1.5,15),lambda=1, lik.method= "ML", cov.model="wave") 
+#exp.ml 
+lines(exp.ml,col="blue")
+summary(exp.ml)
+
+
+#############################################################################
+###### AJUSTE DO MODELO GAUSSIANO POR ML  
+#############################################################################
+
+plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma') 
+gaus.ml<-likfit(d,ini=c(2,15),lambda=1, lik.method= "ML", cov.model="gaus",kappa=2.5) 
+#gaus.ml 
+lines(gaus.ml,col="blue")
+summary(gaus.ml)
+
+
+#############################################################################
+###### AJUSTE DO MODELO Matern k=0.7 POR ML 
+############################################################################ 
+
+plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma dmatern0.7.ml modificado') 
+dmatern07.ml<-likfit(d,ini=c(0.5,0.1),lambda=1, method= "ML", cov.model="matern", kappa=0.7) 
+dmatern07.ml
+lines(dmatern07.ml,col="black")
+summary(dmatern07.ml)
+
+#############################################################################
+###### AJUSTE DO MODELO Matern k=1 POR ML   
+##############################################################################
+
+plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma dmatern1.ml modificado') 
+dmatern1.ml<-likfit(d,ini=c(0.5,0.1),lambda=1, method= "ML", cov.model="matern", kappa=1) 
+dmatern1.ml
+lines(dmatern1.ml,col="black")
+summary(dmatern1.ml)
+
+#############################################################################
+###### AJUSTE DO MODELO Matern k=1.5 POR ML 
+#############################################################################
+
+plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma dmatern15.ml modificado') 
+dmatern15.ml<-likfit(d,ini=c(0.5,0.08),lambda=1, method= "ML", cov.model="matern", kappa=1.5) 
+dmatern15.ml
+lines(dmatern15.ml,col="black")
+summary(dmatern15.ml)
+
+
+# atribuindo modelo ao semivariograma por OLS
+# WAVE
 
 plot(d.var,xlab='Distancia',ylab='semivariancia',main='Semivariograma ') 
 dwave.ols <- variofit(d.var,ini=c(1,5),weights= "equal",cov.model="wave") 
 #  Mostra o gr?fico das semivari?ncias com o modelo ajusto e o r?tulo.
 lines(dwave.ols,col="blue")
 summary(dwave.ols) 
-
+# GAUSSIANO
 
 plot(d.var,xlab='Distancia',ylab='semivariancia',main='Semivariograma ') 
-dgaus.ols <- variofit(d.var,ini=c(1,5),weights= "equal",cov.model="gaus") 
+dgaus.ols <- variofit(d.var,ini=c(1,15),weights= "equal",cov.model="gaus") 
 #  Mostra o gr?fico das semivari?ncias com o modelo ajusto e o r?tulo.
 lines(dgaus.ols,col="blue")
 summary(dgaus.ols) 
