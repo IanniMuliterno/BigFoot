@@ -248,14 +248,14 @@ summary(exp.ml)
 
 
 #############################################################################
-###### AJUSTE DO MODELO EXPONENCIAL POR ML   
+###### AJUSTE DO MODELO WAVE POR ML   
 #############################################################################
 
 plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma') 
-wave.ml<-likfit(d,ini=c(1.5,15),lambda=1, lik.method= "ML", cov.model="wave") 
+wave.ml<-likfit(d,ini=c(1.5,5),lambda=1, lik.method= "ML", cov.model="wave") 
 #exp.ml 
-lines(exp.ml,col="blue")
-summary(exp.ml)
+lines(wave.ml,col="blue")
+summary(wave.ml)
 
 
 #############################################################################
@@ -263,8 +263,7 @@ summary(exp.ml)
 #############################################################################
 
 plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma') 
-gaus.ml<-likfit(d,ini=c(2,15),lambda=1, lik.method= "ML", cov.model="gaus",kappa=2.5) 
-#gaus.ml 
+gaus.ml<-likfit(d,ini=c(2,15),lambda=1, lik.method= "ML", cov.model="gaus") 
 lines(gaus.ml,col="blue")
 summary(gaus.ml)
 
@@ -274,9 +273,9 @@ summary(gaus.ml)
 ############################################################################ 
 
 plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma dmatern0.7.ml modificado') 
-dmatern07.ml<-likfit(d,ini=c(0.5,0.1),lambda=1, method= "ML", cov.model="matern", kappa=0.7) 
-dmatern07.ml
-lines(dmatern07.ml,col="black")
+dmatern07.ml<-likfit(d,ini=c(2,15),lambda=1, method= "ML", cov.model="matern", kappa=0.7) 
+#dmatern07.ml
+lines(dmatern07.ml,col="red")
 summary(dmatern07.ml)
 
 #############################################################################
@@ -284,8 +283,8 @@ summary(dmatern07.ml)
 ##############################################################################
 
 plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma dmatern1.ml modificado') 
-dmatern1.ml<-likfit(d,ini=c(0.5,0.1),lambda=1, method= "ML", cov.model="matern", kappa=1) 
-dmatern1.ml
+dmatern1.ml<-likfit(d,ini=c(2,15),lambda=1, method= "ML", cov.model="matern", kappa=1) 
+#dmatern1.ml
 lines(dmatern1.ml,col="black")
 summary(dmatern1.ml)
 
@@ -294,29 +293,54 @@ summary(dmatern1.ml)
 #############################################################################
 
 plot(d.var,xlab='Distancia',ylab='Semivariancia',main='Semivariograma dmatern15.ml modificado') 
-dmatern15.ml<-likfit(d,ini=c(0.5,0.08),lambda=1, method= "ML", cov.model="matern", kappa=1.5) 
+dmatern15.ml<-likfit(d,ini=c(2,15),lambda=1, method= "ML", cov.model="matern", kappa=1.5) 
 dmatern15.ml
 lines(dmatern15.ml,col="black")
 summary(dmatern15.ml)
 
+#############################################################################
+# Validacao Cruzada e Erro Absoluto do modelo 
+#wave
+vcwave=xvalid(d,model=wave.ml)
+EAwave=sum(abs(vcwave$predicted-vcwave$data))
+EAwave
+summary(vcwave)
+#exp
+vcexp=xvalid(d,model=exp.ml)
+EAexp=sum(abs(vcexp$predicted-vcexp$data))
+EAexp
+summary(vcexp)
+#gaussiano
+vcgaus=xvalid(d,model=gaus.ml)
+EAgaus=sum(abs(vcgaus$predicted-vcgaus$data))
+EAgaus
+summary(vcexp)
+#mat 0.7
+vcmat07=xvalid(d,model=dmatern07.ml)
+EAmat07=sum(abs(vcmat07$predicted-vcmat07$data))
+EAmat07
+summary(vcmat07)
+#mat 1
+vcmat1=xvalid(d,model=dmatern1.ml)
+EAmat1=sum(abs(vcmat1$predicted-vcmat1$data))
+EAmat1
+summary(vcmat1)
+#mat 1.5
+vcmat15=xvalid(d,model=dmatern15.ml)
+EAmat15=sum(abs(vcmat15$predicted-vcmat15$data))
+EAmat15
+summary(vcmat15)
 
-# atribuindo modelo ao semivariograma por OLS
-# WAVE
+modelos <- c("wave","exp","gaus","Mat_0.7","Mat_1","Mat_1.5")
+EA_store <- c(EAwave,EAexp,EAgaus,EAmat07,EAmat1,EAmat15)
+AIC_store <- c(wave.ml$AIC,exp.ml$AIC,gaus.ml$AIC,dmatern07.ml$AIC,
+               dmatern1.ml$AIC,dmatern15.ml$AIC)
+BIC_store <- c(wave.ml$BIC,exp.ml$BIC,gaus.ml$BIC,dmatern07.ml$BIC,
+               dmatern1.ml$BIC,dmatern15.ml$BIC)
+rbind(modelos,round(EA_store,4),round(AIC_store,4),round(BIC_store,4))
 
-plot(d.var,xlab='Distancia',ylab='semivariancia',main='Semivariograma ') 
-dwave.ols <- variofit(d.var,ini=c(1,5),weights= "equal",cov.model="wave") 
-#  Mostra o gr?fico das semivari?ncias com o modelo ajusto e o r?tulo.
-lines(dwave.ols,col="blue")
-summary(dwave.ols) 
-# GAUSSIANO
-
-plot(d.var,xlab='Distancia',ylab='semivariancia',main='Semivariograma ') 
-dgaus.ols <- variofit(d.var,ini=c(1,15),weights= "equal",cov.model="gaus") 
-#  Mostra o gr?fico das semivari?ncias com o modelo ajusto e o r?tulo.
-lines(dgaus.ols,col="blue")
-summary(dgaus.ols) 
-
-
+# Wave se saiu melhor
+# mas o Matern com kappa 1.5 e o gaussiano podem ser considerados 
 
 # criando borda
 points(d,l=1,pt.div="equal",col=gray(seq(1,0,l=11)),main="Post-Plot") 
