@@ -14,6 +14,8 @@ R Studio 1.1.+
 
 ## Dependencies - Packages
 
+library(akima)
+
 library(geoR)  
 
 library(moments)
@@ -24,8 +26,6 @@ library(gstat)
 
 library(readxl)
 
-library(tmaptools)
-
 library(rgeos)
 
 library(raster)
@@ -34,9 +34,11 @@ library(leaflet)
 
 library(tibble)
 
-library(mvtnorm)
-
 library(spTest)
+
+_library(tmaptools) ps: Not THAT necessary_
+
+_library(mvtnorm) ps: Not THAT necessary_
 
 ## Author
 
