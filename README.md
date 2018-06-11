@@ -4,7 +4,7 @@ Usando dados de "avistamento do Pé grande" para praticar estatística espacial.
 Using BigFoot Sighting Data to practice Spatial Statistics
 
 
-_Data set is public, you can find it at <https://www.bfro.net/>, or well, just get the not updated version above_
+_Data set is public, you can find it at <https://www.bfro.net/>, or if ya feeling lazy, just get the version above, remember it's not up to date, tough_
 
 ## Dependencies - Software
 
@@ -35,10 +35,6 @@ library(leaflet)
 library(tibble)
 
 library(spTest)
-
-_library(tmaptools) ps: Not THAT necessary_
-
-_library(mvtnorm) ps: Not THAT necessary_
 
 ## Author
 
