@@ -389,15 +389,19 @@ bf.UK <-ksline(d,locations=gi,cov.pars=dmatern15.ml$cov.pars,
 #install.packages("classInt")
 require(classInt)
 
-#mapa com 5 classes de mesma amplitude
+#mapa com 20 classes de mesma amplitude (40 para o mapa do desvio padrao)
 valores <- bf.UK$predict
 #valores=d.k1$predict
-#mapa do desvio padrao
-#valores <- d.k1$krige.var
-interval_equal1=classIntervals(valores,5,style="equal",intervalClosure="right")
-interval_equal1$brks
+
 # para voltar a usar krig.cov e trabalhar com seu respectivo mapa retire os 
-# os comentarios das linhas 387, 388 e 394 e substituia bf.UF por d.k1
-image(bf.UK,loc=gr,border=borda,col=gray(seq(1,0,l=5)),
-      breaks=c(interval_equal1$brks),main="") #automaticamente recebendo os valores dos intervalos
+# os comentarios das linhas 387, 388 e 394 e substitua bf.UK por d.k1 nos comandos ab
+interval_equal1=classIntervals(valores,5,style="equal",intervalClosure="right")
+#interval_equal1$brks
+
+image(bf.UK,loc=gr,border=borda,col=gray(seq(1,0,l=20)),
+      val=valores,main="Mapa temático") #automaticamente recebendo os valores dos intervalos
 #exp(bf.UK$)
+
+#mapa do desvio padrao
+image(bf.UK,loc=gr,border=borda,col=gray(seq(0,1,l=40)),
+      val=sqrt(bf.UK$krige.var),main="Mapa do desvio padrão") #automaticamente recebendo os valores dos intervalos
