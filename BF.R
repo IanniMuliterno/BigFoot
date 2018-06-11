@@ -16,7 +16,8 @@ library(tibble)
 library(mvtnorm)
 library(spTest)
 
-bf <- read_excel("~/GitHub/BigFoot/bigfoot USA.xlsx")
+bf <- read_excel("C:/Users/tuchi/Desktop/BigFoot-master/BigFoot-master/bigfoot USA.xlsx")
+
 #Removendo Alaska
 #Alaska tecnicamente faz parte dos EUA, mas fica muito distante do resto do pais
 #comentar a linha abaixo para incluir o Alaska
@@ -58,9 +59,9 @@ centros <- data.frame(lati=0,long=0)
 
 for(i in 1:length(states)){
   if(states[i] %in% usa_db$NAME_1){  
-  centros[i,]<-coordinates(gCentroid(usa[usa_db$NAME_1==states[i],]))
+    centros[i,]<-coordinates(gCentroid(usa[usa_db$NAME_1==states[i],]))
   }
-i} 
+  i} 
 
 bf <- cbind(bf,centros)
 
@@ -153,8 +154,8 @@ plot(variog(d,uvec=seq(0,18,l=9),
             dir=pi/2, 
             tol=pi/8 ),main="E-W")
 plot(variog(d,uvec=seq(0,18,l=9), 
-        dir=3*pi/4, 
-        tol=pi/8 ),main="SE-NW")
+            dir=3*pi/4, 
+            tol=pi/8 ),main="SE-NW")
 plot(variog(d,uvec=seq(0,18,l=9), 
             dir=pi/4, 
             tol=pi/8 ),main="SW-NE")
@@ -181,7 +182,7 @@ myh.sb <-  0.85
 
 tr.guan <- GuanTestUnif(spdata = mydt, lagmat = mylags, A = myA, df = 2, h = myh,
                         kernel = "norm", truncation = 1.5, xlims = my.xlims, ylims = my.ylims, 
-                      grid.spacing = my.grid.spacing, window.dims = c(8,5), subblock.h = myh.sb)
+                        grid.spacing = my.grid.spacing, window.dims = c(8,5), subblock.h = myh.sb)
 tr.guan$p.value 
 # segundo a GuanTestUnif com a configuração menos problematica possivel,
 # o H0 e rejeitado por muito pouco
@@ -376,19 +377,27 @@ gi<-polygrid(gr,bor=borda)
 plot(gr)
 poly<-polygrid(gr,bor=borda)
 points(poly,pch="+",col=2)
-KC1=krige.control(obj=dmatern15.ml ,lam=1)
-d.k1=krige.conv(d,loc=gi,krige=KC1)
-
+#d[["data"]] <- log(bf2$Sightings)
+#d[["data"]] <- bf2$Sightings
+#considerar usar ksline no lugar do krige.control
+bf.UK <-ksline(d,locations=gi,cov.pars=dmatern15.ml$cov.pars,
+       nugget=dmatern15.ml$nugget,cov.model="matern",kappa = 1.5,
+       m0="kt",trend=1,ktedata=NULL,ktelocations=NULL)
+# ou este, lembrando que esta configurado para krigagem ordinaria
+#KC1=krige.control(obj=dmatern15.ml ,lam=1)
+#d.k1=krige.conv(d,loc=gi,krige=KC1)
 #install.packages("classInt")
 require(classInt)
 
 #mapa com 5 classes de mesma amplitude
-valores=d.k1$predict
+valores <- bf.UK$predict
+#valores=d.k1$predict
 #mapa do desvio padrao
 #valores <- d.k1$krige.var
 interval_equal1=classIntervals(valores,5,style="equal",intervalClosure="right")
 interval_equal1$brks
-image(d.k1,loc=gr,border=borda,col=gray(seq(1,0,l=5)),
+# para voltar a usar krig.cov e trabalhar com seu respectivo mapa retire os 
+# os comentarios das linhas 387, 388 e 394 e substituia bf.UF por d.k1
+image(bf.UK,loc=gr,border=borda,col=gray(seq(1,0,l=5)),
       breaks=c(interval_equal1$brks),main="") #automaticamente recebendo os valores dos intervalos
-
-
+#exp(bf.UK$)
