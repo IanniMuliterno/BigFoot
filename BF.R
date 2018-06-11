@@ -16,8 +16,7 @@ library(tibble)
 library(mvtnorm)
 library(spTest)
 
-bf <- read_excel("C:/Users/tuchi/Desktop/BigFoot-master/BigFoot-master/bigfoot USA.xlsx")
-
+bf <- read_excel("~/GitHub/BigFoot/bigfoot USA.xlsx")
 #Removendo Alaska
 #Alaska tecnicamente faz parte dos EUA, mas fica muito distante do resto do pais
 #comentar a linha abaixo para incluir o Alaska
@@ -104,42 +103,40 @@ output <- transform(output, cumFreq = cumsum(Freq), relative = prop.table(Freq))
 dv <- sd(Isaw)
 CV = sd(Isaw)*100/mean(Isaw)
 summary(Isaw)
-tst<-as.data.frame.vector(as.table(summary(Isaw)))
+tst<-as.data.frame.vector(as.table(summary(Isaw)))   
 name <- c(row.names(tst),"dv","CV","skewness","kurtosis")
 value <- c(tst$`as.table(summary(Isaw))`,dv,CV,skewness(Isaw),kurtosis(Isaw))
 tst<-data.frame(value)
 row.names(tst)<- name
-tst
+round(tst,3)
 
 bf2 <- bf[,-c(1,3)] # retirando colunas 'obsoletas'
 coordinates(bf2) <- cbind(bf2$lati,bf2$long)
 bf2$Sightings <- as.numeric(bf2$Sightings)
 
+
 d <- as.geodata(bf2)
 #normalidade da vari?vel resposta
+par(mfrow = c(1, 2))
 mean(d[["data"]])
 sd(d[["data"]])
+qqnorm(bf2$Sightings,main="Normal Q-Q Plot for Original data")
 ks.test(d[["data"]], "pnorm", 5, 8)
 mean(log(d[["data"]]))
 sd(log(d[["data"]]))
 ks.test(log(d[["data"]]), "pnorm", 4, 1.2)
-qqnorm(log(d[["data"]]))
+qqnorm(log(d[["data"]]),main="Normal Q-Q Plot for transformed data")
 abline(4,1,col="red")
+par(mfrow = c(1, 1))
 
-d[["data"]] <- log(d[["data"]])
+d[["data"]] <-log(d[["data"]])
 #voltar a variavel resposta sem transforma??es
 #d[["data"]] <- P2$data
 # estudo de tendencia direcional
 points(d,l=1,pt.div="equal",col=gray(seq(1,0,l=11)),main="Post-Plot") 
 points(d,pt.div="quartile",col=c("yellow","green","red","blue"),main="Post-Plot")
 plot(d)
-# ??? rever como preparar a entrada da spplot e bubble
-
-#d2 <- SpatialPointsDataFrame(coords=d$coords,data=bf)
-#d2 <- SpatialPointsDataFrame(coords=d$coords,data=as.data.frame(d2@data[,2]))
-#spplot(d2,"Avistamento", do.log=T)
-#bubble(d2, "Avistamento", dolog=TRUE, key.space="bottom")  # não ajuda em nada nesse caso
-max(dist(d[[1]]))/2
+#max(dist(d[[1]]))/2
 x11()
 Variog <- variog4(d, uvec=seq(0,18,l=11)  )
 plot(Variog, legend = T)
@@ -185,7 +182,9 @@ myh.sb <-  0.85
 tr.guan <- GuanTestUnif(spdata = mydt, lagmat = mylags, A = myA, df = 2, h = myh,
                         kernel = "norm", truncation = 1.5, xlims = my.xlims, ylims = my.ylims, 
                       grid.spacing = my.grid.spacing, window.dims = c(8,5), subblock.h = myh.sb)
-tr.guan$p.value # segundo a GuanTestUnif com a configuração menos problematica possivel, o H0 e rejeitado por muito pouco
+tr.guan$p.value 
+# segundo a GuanTestUnif com a configuração menos problematica possivel,
+# o H0 e rejeitado por muito pouco
 
 #arranjar os dados em formato matricial para aplicar median polish
 bf.mat<-tapply(d[["data"]],list(factor(bf2$lati),factor(bf2$long)),function(x)x)
@@ -214,6 +213,8 @@ summary(reg1) # talvez a longitude nao devesse estar inclusa
 #reg2<-lm(d[["data"]]~bf2$lati)
 #summary(reg2) # ou talvez devesse
 
+# o fato de não parecer existir um patamar no semivariograma inicial
+# leva a crer que existe tendência, porem a median polish devolve zeros
 
 bf.res<-reg1$res #extrair res e plotar
 summary(bf.res)
@@ -341,12 +342,31 @@ rbind(modelos,round(EA_store,4),round(AIC_store,4),round(BIC_store,4))
 
 # Wave se saiu melhor
 # mas o Matern com kappa 1.5 e o gaussiano podem ser considerados 
+par(mfrow = c(1, 3))
+# envelope com wave
+env.wave<-variog.model.env(d,model.pars= wave.ml, obj.variog= d.var)  
+plot(d.var,env= env.wave,xlab='distância',ylab='semivariancia',main='Envelope - Wave') 
+
+# envelope com Mat 1.5
+env.mat15<-variog.model.env(d,model.pars= dmatern15.ml, obj.variog= d.var)  
+plot(d.var,env= env.mat15,xlab='distância',ylab='semivariancia',main='Envelope - Matern k=1.5') 
+
+# envelope com gaus
+env.gaus<-variog.model.env(d,model.pars= gaus.ml, obj.variog= d.var)  
+plot(d.var,env= env.gaus,xlab='distância',ylab='semivariancia',main='Envelope - Gaussiano') 
+par(mfrow = c(1, 1))
+
 
 # criando borda
 points(d,l=1,pt.div="equal",col=gray(seq(1,0,l=11)),main="Post-Plot") 
 
-contorno <- locator()
-borda <- cbind(contorno$x,contorno$y)
+#COMENTADO PARA NAO ACABAR CRIANDO OUTRA BORDA POR CIMA DA ATUAL
+#OS COMANDOS DEVEM SER RODADOS SE O SCRIPT ESTIVER SENDO EXECUTADO
+#PELA PRIMEIRA VEZ
+
+#contorno <- locator()
+#borda <- cbind(contorno$x,contorno$y)
+#write.table(borda,"border.txt")
 polygon(borda)
 #partindo para o processo de Krigagem Ordinaria
 shift <- 5
@@ -356,7 +376,7 @@ gi<-polygrid(gr,bor=borda)
 plot(gr)
 poly<-polygrid(gr,bor=borda)
 points(poly,pch="+",col=2)
-KC1=krige.control(obj=dwave.ols ,lam=1)
+KC1=krige.control(obj=dmatern15.ml ,lam=1)
 d.k1=krige.conv(d,loc=gi,krige=KC1)
 
 #install.packages("classInt")
@@ -364,7 +384,11 @@ require(classInt)
 
 #mapa com 5 classes de mesma amplitude
 valores=d.k1$predict
+#mapa do desvio padrao
+#valores <- d.k1$krige.var
 interval_equal1=classIntervals(valores,5,style="equal",intervalClosure="right")
 interval_equal1$brks
-image(d.k1,loc=gr,border=borda,col=gray(seq(1,0,l=5)),breaks=c(interval_equal1$brks),main="") #automaticamente recebendo os valores dos intervalos
+image(d.k1,loc=gr,border=borda,col=gray(seq(1,0,l=5)),
+      breaks=c(interval_equal1$brks),main="") #automaticamente recebendo os valores dos intervalos
+
 
