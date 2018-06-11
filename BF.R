@@ -1,22 +1,19 @@
-#library(kableExtra) # MEMO
-#require(map)
-#require(purrr)
-#require(xtable)
+
 library(akima)
 require(geoR)  
 require(moments)
 require(sp)
 require(gstat)
 library(readxl)
-library(tmaptools)
 library(rgeos)
 library(raster)
 library(leaflet)
 library(tibble)
-library(mvtnorm)
 library(spTest)
 
-bf <- read_excel("C:/Users/tuchi/Desktop/BigFoot-master/BigFoot-master/bigfoot USA.xlsx")
+#put the path to your BigFoot data below
+
+bf <- read_excel("~/GitHub/BigFoot/bigfoot USA.xlsx")
 
 #Removendo Alaska
 #Alaska tecnicamente faz parte dos EUA, mas fica muito distante do resto do pais
@@ -131,7 +128,7 @@ abline(4,1,col="red")
 par(mfrow = c(1, 1))
 
 d[["data"]] <-log(d[["data"]])
-#voltar a variavel resposta sem transforma??es
+#voltar a variavel resposta sem transformacoes
 #d[["data"]] <- P2$data
 # estudo de tendencia direcional
 points(d,l=1,pt.div="equal",col=gray(seq(1,0,l=11)),main="Post-Plot") 
@@ -187,6 +184,8 @@ tr.guan$p.value
 # segundo a GuanTestUnif com a configuração menos problematica possivel,
 # o H0 e rejeitado por muito pouco
 
+#tentando melhorar a estética do semivariograma
+#foram utilizadas Median Polish e regressão.
 #arranjar os dados em formato matricial para aplicar median polish
 bf.mat<-tapply(d[["data"]],list(factor(bf2$lati),factor(bf2$long)),function(x)x)
 
@@ -207,15 +206,18 @@ plot(bf.res)
 #bf.variog.d<-variog4(bf.res.g,max.dist=18,estimator.type="modulus")
 #plot(bf.variog.d,lty=7,lwd=2)
 
+               
+# o fato de não parecer existir um patamar no semivariograma inicial
+# leva a crer que existe tendência, porem o median polish devolve zeros
+               
+               
 #Remover tendência usando regressão
 reg1<-lm(d[["data"]]~bf2$lati+bf2$long)#regressão nas coordenadas
-summary(reg1) # talvez a longitude nao devesse estar inclusa
+summary(reg1) # talvez a longitude nao devesse estar inclusa # |
+                                                             # |
+ #reg2<-lm(d[["data"]]~bf2$lati)                             # |
+#summary(reg2) # ou talvez devesse                           # |
 
-#reg2<-lm(d[["data"]]~bf2$lati)
-#summary(reg2) # ou talvez devesse
-
-# o fato de não parecer existir um patamar no semivariograma inicial
-# leva a crer que existe tendência, porem a median polish devolve zeros
 
 bf.res<-reg1$res #extrair res e plotar
 summary(bf.res)
@@ -229,7 +231,9 @@ bf.res.reg.variog2<-variog4(bf.reg.g,max.dist=18,estimator.type="modulus",trend 
 x11()
 plot(bf.res.reg.variog2)
 title(main="Linear trend Residuals Directional Variograms")
-
+# Nenhuma das duas tentativas devolveu algo melhor que o semivariograma dos dados transformados (log), voltamos a eles então
+               
+               
 # omnidirecional
 
 d.var <- variog(d, uvec=seq(0,25,l=11),estimator.type="classical",pairs.min=30)
