@@ -1,6 +1,7 @@
 # BigFoot
 
 Usando dados de "avistamento do Pé grande" para praticar estatística espacial.
+
 Using BigFoot Sighting Data to practice Spatial Statistics
 
 
