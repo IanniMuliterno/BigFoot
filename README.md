@@ -1,9 +1,10 @@
 # BigFoot
 
-Usando dados de "avistamento do Pé grande" para praticar estatística espacial.           ![alt text]()
+Usando dados de "avistamento do Pé grande" para praticar estatística espacial.
 
 Using BigFoot Sighting Data to practice Spatial Statistics
 
+<img src="https://danscartoons.com/wp-content/uploads/2013/08/Bigfoot-Cartoon-12.jpg" data-canonical- width="300" height="200" align="middle" />
 
 _Data set is public, you can find it at <https://www.bfro.net/>, or if ya feeling lazy, just get the version above, remember it's not up to date, tough_
 
